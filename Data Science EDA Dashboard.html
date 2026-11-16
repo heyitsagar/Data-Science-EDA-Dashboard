@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced EDA & Feature Engineering Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Font Awesome for Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom Scrollbar for tables */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .nav-item.active {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border-right: 4px solid #2563eb;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden text-gray-800">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white shadow-xl z-10 flex flex-col transition-all duration-300">
+        <div class="p-6 border-b border-gray-100 flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                <i class="fas fa-chart-pie text-xl"></i>
+            </div>
+            <h1 class="text-lg font-bold text-gray-800 leading-tight">EDA <br><span class="text-sm font-medium text-gray-500">Dashboard</span></h1>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-1">
+                <li>
+                    <button onclick="switchTab('overview')" id="nav-overview" class="nav-item active w-full text-left px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-brand-600 transition-colors flex items-center space-x-3">
+                        <i class="fas fa-home w-5 text-center"></i> <span>Project Overview</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="switchTab('raw-data')" id="nav-raw-data" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-brand-600 transition-colors flex items-center space-x-3">
+                        <i class="fas fa-database w-5 text-center"></i> <span>1. Raw Dataset</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="switchTab('cleaning')" id="nav-cleaning" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-brand-600 transition-colors flex items-center space-x-3">
+                        <i class="fas fa-broom w-5 text-center"></i> <span>2. Data Cleaning</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="switchTab('outliers')" id="nav-outliers" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-brand-600 transition-colors flex items-center space-x-3">
+                        <i class="fas fa-bullseye w-5 text-center"></i> <span>3. Outlier Treatment</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="switchTab('eda')" id="nav-eda" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-brand-600 transition-colors flex items-center space-x-3">
+                        <i class="fas fa-chart-line w-5 text-center"></i> <span>4. Exploratory Analysis</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="switchTab('features')" id="nav-features" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-brand-600 transition-colors flex items-center space-x-3">
+                        <i class="fas fa-cogs w-5 text-center"></i> <span>5. Feature Engineering</span>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="p-6 border-t border-gray-100 text-xs text-gray-400 text-center">
+            Built for Data Science Demo<br>v1.0.0
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50">
+        
+        <!-- Header -->
+        <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-0">
+            <h2 id="page-title" class="text-xl font-semibold text-gray-800">Project Overview</h2>
+            <div class="flex items-center space-x-4">
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold shadow-sm border border-green-200"><i class="fas fa-check-circle mr-1"></i> Pipeline Active</span>
+            </div>
+        </header>
+
+        <!-- Scrollable Content Area -->
+        <div class="flex-1 overflow-y-auto p-8" id="content-area">
+            
+            <!-- SECTION: Overview -->
+            <div id="overview" class="section-content fade-in">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-brand-50 to-indigo-50 rounded-bl-full -z-10 opacity-50"></div>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Welcome to the Interactive Data Pipeline</h3>
+                    <p class="text-gray-600 mb-6 leading-relaxed max-w-3xl">
+                        This dashboard simulates a complete end-to-end Python Data Science workflow directly in your browser. We start by generating a simulated, messy "Retail Customer" dataset. Through the navigation steps, you will see how data is cleaned, how missing values and outliers are statistically treated, visualized, and finally prepared for Machine Learning with engineered features.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-gray-50 rounded-xl p-5 border border-gray-100 hover:shadow-md transition-shadow">
+                            <i class="fas fa-bug text-red-500 text-2xl mb-3"></i>
+                            <h4 class="font-semibold text-gray-800">1. Messy Data Injection</h4>
+                            <p class="text-sm text-gray-500 mt-2">Synthetic nulls, negative ages, and duplicate records are dynamically generated.</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-xl p-5 border border-gray-100 hover:shadow-md transition-shadow">
+                            <i class="fas fa-calculator text-brand-500 text-2xl mb-3"></i>
+                            <h4 class="font-semibold text-gray-800">2. Statistical Imputation</h4>
+                            <p class="text-sm text-gray-500 mt-2">Median and standard IQR calculations are applied to clean the dataset.</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-xl p-5 border border-gray-100 hover:shadow-md transition-shadow">
+                            <i class="fas fa-lightbulb text-yellow-500 text-2xl mb-3"></i>
+                            <h4 class="font-semibold text-gray-800">3. Insights & Engineering</h4>
+                            <p class="text-sm text-gray-500 mt-2">New predictive columns are derived and visually validated.</p>
+                        </div>
+                    </div>
+                    <button onclick="switchTab('raw-data')" class="mt-8 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium shadow-lg shadow-brand-500/30 transition-all flex items-center">
+                        Start the Pipeline <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SECTION: Raw Data -->
+            <div id="raw-data" class="section-content hidden fade-in flex flex-col h-full">
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">Simulated Raw Dataset</h3>
+                        <p class="text-sm text-gray-500 mt-1">Notice the <span class="text-red-500 font-bold">NaNs</span>, extreme values, and casing inconsistencies.</p>
+                    </div>
+                    <div class="text-sm font-medium text-gray-500 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100">
+                        Total Records: <span id="raw-count" class="text-brand-600 font-bold"></span>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col">
+                    <div class="overflow-x-auto overflow-y-auto flex-1 p-0">
+                        <table class="w-full text-left border-collapse min-w-max">
+                            <thead class="bg-gray-50 sticky top-0 shadow-sm">
+                                <tr>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b">Cust_ID</th>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b">Age</th>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b">Income ($)</th>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b">Spend_Electronics</th>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b">Spend_Groceries</th>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b">Membership</th>
+                                </tr>
+                            </thead>
+                            <tbody id="raw-table-body" class="divide-y divide-gray-100 text-sm">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Cleaning -->
+            <div id="cleaning" class="section-content hidden fade-in">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Handling Missing Data & Inconsistencies</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Issue Card -->
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <h4 class="font-semibold text-gray-800 border-b pb-2 mb-4"><i class="fas fa-exclamation-triangle text-orange-500 mr-2"></i> Identified Issues</h4>
+                        <ul class="space-y-3 text-sm text-gray-600">
+                            <li class="flex justify-between"><span>Null Incomes:</span> <span id="stat-null-income" class="font-bold text-red-500"></span></li>
+                            <li class="flex justify-between"><span>Null Electronics Spend:</span> <span id="stat-null-spend" class="font-bold text-red-500"></span></li>
+                            <li class="flex justify-between"><span>Negative Ages:</span> <span id="stat-neg-age" class="font-bold text-orange-500"></span></li>
+                            <li class="flex justify-between"><span>Casing Errors ('platinum'):</span> <span class="font-bold text-orange-500">Fixed to Title Case</span></li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Resolution Card -->
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <h4 class="font-semibold text-gray-800 border-b pb-2 mb-4"><i class="fas fa-wrench text-brand-500 mr-2"></i> Applied Resolutions</h4>
+                        <ul class="space-y-3 text-sm text-gray-600">
+                            <li><span class="font-semibold text-gray-800">Income Imputation:</span> Used <b>Median</b> strategy due to presence of extreme outliers (skewed data).</li>
+                            <li><span class="font-semibold text-gray-800">Spend Imputation:</span> Used <b>Mean</b> strategy (approximating SimpleImputer logic).</li>
+                            <li><span class="font-semibold text-gray-800">Negative Ages:</span> Converted to Nulls, then imputed with Median Age.</li>
+                            <li><span class="font-semibold text-gray-800">Status:</span> Dataset is structurally solid. 0 Nulls remain.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-green-50 border border-green-200 rounded-xl p-6 text-center shadow-sm">
+                    <i class="fas fa-check-circle text-green-500 text-3xl mb-2"></i>
+                    <h4 class="font-bold text-green-800">Data Cleansed Successfully</h4>
+                    <p class="text-sm text-green-700 mt-1">Ready for outlier detection.</p>
+                </div>
+            </div>
+
+            <!-- SECTION: Outliers -->
+            <div id="outliers" class="section-content hidden fade-in">
+                <div class="mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">Outlier Detection (Income Feature)</h3>
+                    <p class="text-sm text-gray-500 mt-1">Using the Interquartile Range (IQR) method to cap extreme wealth to an upper boundary.</p>
+                </div>
+
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+                    <div class="flex flex-col md:flex-row items-center gap-8">
+                        <div class="w-full md:w-2/3 h-64 relative">
+                            <canvas id="outlierChart"></canvas>
+                        </div>
+                        <div class="w-full md:w-1/3 bg-gray-50 rounded-lg p-5 border border-gray-200 text-sm">
+                            <h4 class="font-bold text-gray-800 mb-3 border-b pb-2">IQR Capping Logic</h4>
+                            <p class="text-gray-600 mb-2"><b>Q1 (25%):</b> <span id="stat-q1"></span></p>
+                            <p class="text-gray-600 mb-2"><b>Q3 (75%):</b> <span id="stat-q3"></span></p>
+                            <p class="text-gray-600 mb-2"><b>IQR:</b> <span id="stat-iqr"></span></p>
+                            <p class="text-red-500 font-semibold mb-2"><b>Upper Bound:</b> <span id="stat-upper"></span></p>
+                            <p class="text-gray-600 mt-4 leading-relaxed">
+                                Values above the red line (Upper Bound) are not deleted, but <b>capped</b> (Winsorization) to the upper limit to prevent model distortion while retaining the record.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: EDA -->
+            <div id="eda" class="section-content hidden fade-in">
+                <h3 class="text-xl font-bold text-gray-800 mb-6">Exploratory Data Analysis</h3>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Chart 1: Age Dist -->
+                    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                        <h4 class="text-sm font-bold text-gray-700 text-center mb-4">Customer Age Distribution</h4>
+                        <div class="h-64 relative">
+                            <canvas id="ageDistChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Chart 2: Membership -->
+                    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                        <h4 class="text-sm font-bold text-gray-700 text-center mb-4">Membership Tiers</h4>
+                        <div class="h-64 relative">
+                            <canvas id="membershipChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 3: Scatter -->
+                    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 lg:col-span-2">
+                        <h4 class="text-sm font-bold text-gray-700 text-center mb-4">Income vs Total Spending (After Outlier Capping)</h4>
+                        <div class="h-80 relative">
+                            <canvas id="scatterChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Feature Engineering -->
+            <div id="features" class="section-content hidden fade-in flex flex-col h-full">
+                <div class="mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">Final Machine-Learning Ready Dataset</h3>
+                    <p class="text-sm text-gray-500 mt-1">3 New features engineered: <b>Total_Spending</b>, <b>Income_to_Spend_Ratio</b>, and <b>Age_Group</b>.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 border-l-4 border-l-brand-500">
+                        <h4 class="text-sm font-bold text-gray-800">Total Spending</h4>
+                        <p class="text-xs text-gray-500 mt-1">Electronics + Groceries</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 border-l-4 border-l-indigo-500">
+                        <h4 class="text-sm font-bold text-gray-800">Income/Spend Ratio</h4>
+                        <p class="text-xs text-gray-500 mt-1">Total Spending / Income</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 border-l-4 border-l-purple-500">
+                        <h4 class="text-sm font-bold text-gray-800">Age Group</h4>
+                        <p class="text-xs text-gray-500 mt-1">Youth, Adult, Middle, Senior</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col">
+                    <div class="overflow-x-auto overflow-y-auto flex-1 p-0">
+                        <table class="w-full text-left border-collapse min-w-max">
+                            <thead class="bg-gray-50 sticky top-0 shadow-sm z-10">
+                                <tr>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b">Cust_ID</th>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b bg-brand-50">Age_Group</th>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b">Income ($)</th>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b">Membership</th>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b bg-indigo-50">Total_Spending</th>
+                                    <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b bg-purple-50">Ratio</th>
+                                </tr>
+                            </thead>
+                            <tbody id="final-table-body" class="divide-y divide-gray-100 text-sm">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- UI/UX Messages (Replaces alert) -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 text-white px-6 py-3 rounded-xl shadow-2xl transition-all duration-300 transform translate-y-20 opacity-0 z-50 flex items-center space-x-3">
+        <i class="fas fa-info-circle text-brand-400"></i>
+        <span id="toast-msg" class="text-sm font-medium">Message</span>
+    </div>
+
+    <!-- Logic Script -->
+    <script>
+        // Data State
+        let rawData = [];
+        let cleanData = [];
+        let chartsRendered = false;
+
+        // Configuration
+        const numRecords = 100;
+        const missingRate = 0.10; // 10%
+        
+        // --- 1. Data Generation (Simulating Python script) ---
+        function generateSyntheticData() {
+            const types = ['Bronze', 'Silver', 'Gold', 'platinum']; // Intentional lower case
+            
+            for(let i=1; i<=numRecords; i++) {
+                // Base metrics
+                let age = Math.floor(Math.random() * 40) + 20; // 20 to 60
+                let income = Math.floor(Math.random() * 40000) + 30000; // 30k to 70k
+                let spendE = Math.floor(Math.random() * 1000) + 100;
+                let spendG = Math.floor(Math.random() * 600) + 100;
+                
+                // Inject anomalies for early rows
+                if (i <= 5) {
+                    income = income * (Math.floor(Math.random() * 5) + 5); // Huge outliers (150k - 350k)
+                }
+                if (i > 5 && i <= 8) {
+                    age = age * -1; // Negative ages
+                }
+
+                // Inject nulls
+                if (Math.random() < missingRate) income = null;
+                if (Math.random() < missingRate) spendE = null;
+
+                rawData.push({
+                    id: i,
+                    age: age,
+                    income: income,
+                    spendE: spendE,
+                    spendG: spendG,
+                    membership: types[Math.floor(Math.random() * types.length)]
+                });
+            }
+            
+            // Add a duplicate
+            if(rawData.length > 0) {
+                rawData.push({...rawData[10], id: 11}); // duplicate ID 11 basically
+            }
+        }
+
+        // --- 2. Data Cleaning & Engineering Pipeline ---
+        let iqrStats = {};
+
+        function processData() {
+            // Deep copy to preserve raw viewing
+            cleanData = JSON.parse(JSON.stringify(rawData));
+            
+            // Deduplicate (Simulation: simple filter by ID)
+            let uniqueIds = new Set();
+            cleanData = cleanData.filter(row => {
+                if(uniqueIds.has(row.id)) return false;
+                uniqueIds.add(row.id);
+                return true;
+            });
+
+            // Tracking issues for the UI
+            let nullIncomes = 0, nullSpends = 0, negAges = 0;
+
+            // Arrays for calculating medians/means
+            let validIncomes = [];
+            let validSpends = [];
+            let validAges = [];
+
+            // Pass 1: Identify issues & collect valid data for stats
+            cleanData.forEach(row => {
+                if (row.income === null) nullIncomes++; else validIncomes.push(row.income);
+                if (row.spendE === null) nullSpends++; else validSpends.push(row.spendE);
+                
+                if (row.age < 0) {
+                    negAges++;
+                    row.age = null; // Convert negative to null
+                } else if (row.age !== null) {
+                    validAges.push(row.age);
+                }
+
+                // Fix casing
+                if (row.membership === 'platinum') row.membership = 'Platinum';
+            });
+
+            // Update UI Stats
+            document.getElementById('stat-null-income').textContent = nullIncomes;
+            document.getElementById('stat-null-spend').textContent = nullSpends;
+            document.getElementById('stat-neg-age').textContent = negAges;
+
+            // Calculate Imputation Values
+            validIncomes.sort((a,b) => a-b);
+            const medianIncome = validIncomes[Math.floor(validIncomes.length / 2)];
+            
+            validAges.sort((a,b) => a-b);
+            const medianAge = validAges[Math.floor(validAges.length / 2)];
+
+            const meanSpend = validSpends.reduce((a,b) => a+b, 0) / validSpends.length;
+
+            // Outlier calculation (IQR on Income) before imputation to mimic standard flow
+            const q1 = validIncomes[Math.floor(validIncomes.length * 0.25)];
+            const q3 = validIncomes[Math.floor(validIncomes.length * 0.75)];
+            const iqr = q3 - q1;
+            const upperBound = q3 + (1.5 * iqr);
+            
+            iqrStats = { q1, q3, iqr, upperBound };
+
+            // Update UI Outlier Stats
+            document.getElementById('stat-q1').textContent = "$" + q1.toLocaleString(undefined, {maximumFractionDigits:0});
+            document.getElementById('stat-q3').textContent = "$" + q3.toLocaleString(undefined, {maximumFractionDigits:0});
+            document.getElementById('stat-iqr').textContent = "$" + iqr.toLocaleString(undefined, {maximumFractionDigits:0});
+            document.getElementById('stat-upper').textContent = "$" + upperBound.toLocaleString(undefined, {maximumFractionDigits:0});
+
+            // Pass 2: Impute, Cap Outliers, Feature Engineer
+            cleanData.forEach(row => {
+                // Impute
+                if (row.income === null) row.income = medianIncome;
+                if (row.spendE === null) row.spendE = meanSpend;
+                if (row.age === null) row.age = medianAge;
+
+                // Cap Outlier (Income)
+                row.originalIncome = row.income; // Keep for plotting before/after
+                if (row.income > upperBound) {
+                    row.income = upperBound;
+                }
+
+                // Feature Engineering
+                row.totalSpend = row.spendE + row.spendG;
+                row.ratio = (row.totalSpend / row.income).toFixed(4);
+                
+                // Age Group
+                if(row.age < 25) row.ageGroup = 'Youth';
+                else if (row.age < 45) row.ageGroup = 'Adult';
+                else if (row.age < 60) row.ageGroup = 'Middle-Aged';
+                else row.ageGroup = 'Senior';
+            });
+        }
+
+        // --- 3. Rendering Functions ---
+        function renderTables() {
+            // Raw Table
+            const rawBody = document.getElementById('raw-table-body');
+            document.getElementById('raw-count').textContent = rawData.length;
+            
+            let rawHTML = '';
+            rawData.forEach(row => {
+                const incomeHtml = row.income === null ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">NaN</span>` : `$${row.income.toLocaleString()}`;
+                const spendHtml = row.spendE === null ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">NaN</span>` : `$${row.spendE.toLocaleString()}`;
+                const ageClass = row.age < 0 ? 'text-red-500 font-bold' : '';
+                const memClass = row.membership === 'platinum' ? 'text-orange-500 font-bold' : '';
+
+                rawHTML += `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="py-2 px-4 border-b font-medium text-gray-700">#${row.id}</td>
+                        <td class="py-2 px-4 border-b ${ageClass}">${row.age}</td>
+                        <td class="py-2 px-4 border-b">${incomeHtml}</td>
+                        <td class="py-2 px-4 border-b">${spendHtml}</td>
+                        <td class="py-2 px-4 border-b">$${row.spendG.toLocaleString()}</td>
+                        <td class="py-2 px-4 border-b ${memClass}">${row.membership}</td>
+                    </tr>
+                `;
+            });
+            rawBody.innerHTML = rawHTML;
+
+            // Final Table
+            const finalBody = document.getElementById('final-table-body');
+            let finalHTML = '';
+            cleanData.forEach(row => {
+                finalHTML += `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="py-2 px-4 border-b font-medium text-gray-700">#${row.id}</td>
+                        <td class="py-2 px-4 border-b text-brand-600 font-medium">${row.ageGroup} <span class="text-xs text-gray-400">(${row.age})</span></td>
+                        <td class="py-2 px-4 border-b">$${row.income.toLocaleString(undefined, {maximumFractionDigits:0})}</td>
+                        <td class="py-2 px-4 border-b">${row.membership}</td>
+                        <td class="py-2 px-4 border-b font-bold text-indigo-600">$${row.totalSpend.toLocaleString(undefined, {maximumFractionDigits:0})}</td>
+                        <td class="py-2 px-4 border-b text-purple-600">${row.ratio}</td>
+                    </tr>
+                `;
+            });
+            finalBody.innerHTML = finalHTML;
+        }
+
+        // --- 4. Chart.js Rendering ---
+        let chartInstances = {};
+
+        function renderCharts() {
+            if (chartsRendered) return;
+            
+            // Configuration for aesthetics
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.color = '#64748b';
+            
+            // 1. Outlier Chart (Scatter simulating 1D distribution vs Upper bound)
+            const ctxOutlier = document.getElementById('outlierChart').getContext('2d');
+            const scatterDataOriginal = cleanData.map(d => ({x: d.id, y: d.originalIncome}));
+            
+            chartInstances['outlier'] = new Chart(ctxOutlier, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Original Income',
+                        data: scatterDataOriginal,
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        annotation: {
+                            // Using standard chartjs lines via a plugin normally, 
+                            // but for vanilla chart.js without annotation plugin, we draw a dummy line dataset.
+                        }
+                    },
+                    scales: {
+                        y: { title: { display: true, text: 'Income ($)' } },
+                        x: { display: false } // Hide ID axis
+                    }
+                }
+            });
+
+            // Add upper bound line manually using a line dataset
+            chartInstances['outlier'].data.datasets.push({
+                type: 'line',
+                label: 'Capping Threshold (Upper Bound)',
+                data: [{x: 0, y: iqrStats.upperBound}, {x: numRecords, y: iqrStats.upperBound}],
+                borderColor: 'rgba(239, 68, 68, 0.8)',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+            });
+            chartInstances['outlier'].update();
+
+            // 2. Age Distribution (Histogram using Bar)
+            const ageBins = {'20-29':0, '30-39':0, '40-49':0, '50-59':0, '60+':0};
+            cleanData.forEach(d => {
+                if(d.age < 30) ageBins['20-29']++;
+                else if(d.age < 40) ageBins['30-39']++;
+                else if(d.age < 50) ageBins['40-49']++;
+                else if(d.age < 60) ageBins['50-59']++;
+                else ageBins['60+']++;
+            });
+
+            const ctxAge = document.getElementById('ageDistChart').getContext('2d');
+            chartInstances['age'] = new Chart(ctxAge, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(ageBins),
+                    datasets: [{
+                        label: 'Customers',
+                        data: Object.values(ageBins),
+                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 3. Membership Bar
+            const memCounts = {};
+            cleanData.forEach(d => {
+                memCounts[d.membership] = (memCounts[d.membership] || 0) + 1;
+            });
+            const ctxMem = document.getElementById('membershipChart').getContext('2d');
+            chartInstances['mem'] = new Chart(ctxMem, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(memCounts),
+                    datasets: [{
+                        data: Object.values(memCounts),
+                        backgroundColor: ['#cd7f32', '#c0c0c0', '#ffd700', '#e5e4e2'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {position: 'right'} } }
+            });
+
+            // 4. Scatter Plot: Income vs Total Spending
+            const ctxScatter = document.getElementById('scatterChart').getContext('2d');
+            chartInstances['scatter'] = new Chart(ctxScatter, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Customers',
+                        data: cleanData.map(d => ({x: d.income, y: d.totalSpend})),
+                        backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                        borderColor: '#059669',
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Capped Income ($)' } },
+                        y: { title: { display: true, text: 'Total Spending ($)' } }
+                    }
+                }
+            });
+
+            chartsRendered = true;
+        }
+
+        // --- 5. Navigation Logic ---
+        const sections = ['overview', 'raw-data', 'cleaning', 'outliers', 'eda', 'features'];
+        const sectionTitles = {
+            'overview': 'Project Overview',
+            'raw-data': '1. Raw Simulated Data',
+            'cleaning': '2. Data Cleaning & Imputation',
+            'outliers': '3. Outlier Treatment',
+            'eda': '4. Exploratory Data Analysis (EDA)',
+            'features': '5. Feature Engineering'
+        };
+
+        function switchTab(tabId) {
+            // Update Title
+            document.getElementById('page-title').textContent = sectionTitles[tabId];
+
+            // Toggle Content
+            sections.forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+                document.getElementById(`nav-${id}`).classList.remove('active', 'bg-eff6ff', 'text-brand-600', 'border-brand-600', 'border-r-4');
+                document.getElementById(`nav-${id}`).classList.add('text-gray-600');
+            });
+            
+            const activeContent = document.getElementById(tabId);
+            activeContent.classList.remove('hidden');
+            
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            activeNav.classList.add('active', 'text-brand-600', 'border-brand-600', 'border-r-4');
+            activeNav.classList.remove('text-gray-600');
+            activeNav.style.backgroundColor = '#eff6ff';
+
+            // Reset backgrounds for others (cleanup due to direct style setting above)
+            sections.forEach(id => {
+                if(id !== tabId) document.getElementById(`nav-${id}`).style.backgroundColor = '';
+            });
+
+            // Lazy render charts to prevent zero-dimension canvas issues
+            if (tabId === 'outliers' || tabId === 'eda') {
+                setTimeout(renderCharts, 100);
+            }
+
+            showToast(`Loaded ${sectionTitles[tabId]}`);
+        }
+
+        // --- UI Utilities ---
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2000);
+        }
+
+        // --- Initialization ---
+        window.onload = () => {
+            generateSyntheticData();
+            processData();
+            renderTables();
+            
+            // Set initial active state correctly via JS
+            document.getElementById('nav-overview').style.backgroundColor = '#eff6ff';
+        };
+
+    </script>
+</body>
+</html>
